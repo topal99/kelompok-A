@@ -1,0 +1,9 @@
+<h1>Welcome to Wiki Games</h1>
+<p>Explore various heroes and their types!</p>
+
+{{#if user}}
+<p>Hello, {{user.username}}!</p>
+<a href="/heroes" class="btn btn-primary">Go to see heroes</a>
+{{else}}
+<p>Please <a href="/login">login</a> or <a href="/register">register</a> to add heroes.</p>
+{{/if}}
