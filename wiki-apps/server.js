@@ -8,13 +8,19 @@ const hbs = require('hbs'); // Import hbs for helper registration
 
 // Setup Handlebars dengan cara terbaru
 app.set('view engine', 'hbs');
-app.engine('hbs', engine({ extname: '.hbs', defaultLayout: 'main',
+app.engine('hbs', engine({
+    extname: '.hbs',
+    defaultLayout: 'main',
     helpers: {
-        eq: (a, b) => a === b}  // Registering the eq helper directly here
+        eq: (a, b) => a === b,  // Registering the eq helper directly here
+        ifCond: (v1, v2, options) => {
+            if (v1 === v2) {
+                return options.fn(this); // Render the block if true
+            }
+            return options.inverse(this); // Render the inverse block if false
+        }
+    }
 }));
-
-// Register the eq helper
-hbs.registerHelper('eq', (a, b) => a === b);
 
 // PostgreSQL Pool
 const pool = new Pool({
@@ -172,10 +178,25 @@ app.post('/edit-hero/:id', isAuthenticated, async (req, res) => {
     res.redirect('/heroes');
 });
 
-// List Heroes
 app.get('/heroes', isAuthenticated, async (req, res) => {
-    const heroes = await pool.query('SELECT heroes_tb.*, type_tb.name AS type_name FROM heroes_tb JOIN type_tb ON heroes_tb.type_id = type_tb.id');
-    res.render('heroes', { heroes: heroes.rows, user: req.session.user });
+    const { type } = req.query;
+    let query = 'SELECT heroes_tb.*, type_tb.name AS type_name FROM heroes_tb JOIN type_tb ON heroes_tb.type_id = type_tb.id';
+    const queryParams = [];
+
+    if (type && type !== 'all') {
+        query += ' WHERE heroes_tb.type_id = $1';
+        queryParams.push(type);
+    }
+
+    const heroes = await pool.query(query, queryParams);
+    const types = await pool.query('SELECT * FROM type_tb'); // Ambil semua tipe
+
+    res.render('heroes', {
+        heroes: heroes.rows,
+        types: types.rows,
+        selectedType: type, // Mengirimkan tipe yang dipilih ke view
+        user: req.session.user
+    });
 });
 
 // Show Hero Details
